@@ -42,7 +42,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+uint32_t Pulsewidth_us=0;
+uint32_t PulsewidthCalc_us=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,7 +59,7 @@
 /* External variables --------------------------------------------------------*/
 
 /* USER CODE BEGIN EV */
-
+extern TIM_HandleTypeDef htim1;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -186,6 +187,12 @@ void SysTick_Handler(void)
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
+
+
+  Pulsewidth_us=HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_2);//numbers 1000-2000 [us] +-3 possible
+  if(Pulsewidth_us<1000)Pulsewidth_us=1000;						//Saturate max Value
+  else if(Pulsewidth_us>2000)Pulsewidth_us=2000;				//Saturate min Value
+  PulsewidthCalc_us=Pulsewidth_us-1000;							//numbers 0-1000 [us]
 
   /* USER CODE END SysTick_IRQn 1 */
 }
