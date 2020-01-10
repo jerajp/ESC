@@ -47,9 +47,21 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-#define PIN_C13_ON  GPIOC->BSRR=0x00002000  	// 1 << (13)
-#define PIN_C13_OFF GPIOC->BSRR=0x20000000      // 1 << (16+13)
+#define LED_ON  GPIOB->BSRR=0x00000100  	//B8  1 << (8)
+#define LED_OFF GPIOB->BSRR=0x01000000      //B8  1 << (16+8)
+
+#define ALowON  GPIOA->BSRR=0x00000008  	//A3  1 << (3)
+#define ALowOFF GPIOA->BSRR=0x00080000  	//A3  1 << (16+3)
+
+#define BLowON  GPIOA->BSRR=0x00000010 		//A5  1 << (4)
+#define BLowOFF GPIOA->BSRR=0x00100000  	//A5  1 << (16+4)
+
+#define CLowON  GPIOA->BSRR=0x00000020 		//A5  1 << (5)
+#define CLowOFF GPIOA->BSRR=0x00200000  	//A5  1 << (16+5)
+
 /* USER CODE END EM */
+
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
@@ -59,8 +71,26 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define LED_Pin GPIO_PIN_13
-#define LED_GPIO_Port GPIOC
+#define AHigh_Pin GPIO_PIN_0
+#define AHigh_GPIO_Port GPIOA
+#define Bhigh_Pin GPIO_PIN_1
+#define Bhigh_GPIO_Port GPIOA
+#define Chigh_Pin GPIO_PIN_2
+#define Chigh_GPIO_Port GPIOA
+#define ALow_Pin GPIO_PIN_3
+#define ALow_GPIO_Port GPIOA
+#define BLow_Pin GPIO_PIN_4
+#define BLow_GPIO_Port GPIOA
+#define CLow_Pin GPIO_PIN_5
+#define CLow_GPIO_Port GPIOA
+#define Azero_Pin GPIO_PIN_0
+#define Azero_GPIO_Port GPIOB
+#define Bzero_Pin GPIO_PIN_1
+#define Bzero_GPIO_Port GPIOB
+#define Czero_Pin GPIO_PIN_10
+#define Czero_GPIO_Port GPIOB
+#define LED_Pin GPIO_PIN_8
+#define LED_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
