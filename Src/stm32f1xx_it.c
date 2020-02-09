@@ -23,6 +23,7 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "funkcije.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,6 +45,10 @@
 /* USER CODE BEGIN PV */
 uint32_t Pulsewidth_us=0;
 uint32_t PulsewidthCalc_us=0;
+uint32_t PulsewidthCalc_us_limited=0;
+uint32_t statedelaycount=0;
+uint32_t MotorStateManual=0;
+uint32_t MotorStatus=0; //0-OFF, 1-MANUAL, 2-AUTO
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,9 +62,16 @@ uint32_t PulsewidthCalc_us=0;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-
+extern TIM_HandleTypeDef htim3;
 /* USER CODE BEGIN EV */
 extern TIM_HandleTypeDef htim1;
+
+extern uint32_t watch1;
+extern uint32_t watch2;
+extern uint32_t watch3;
+extern uint32_t watch4;
+extern uint32_t watch5;
+
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -188,11 +200,42 @@ void SysTick_Handler(void)
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
-
+  //GET INPUT PWM
   Pulsewidth_us=HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_2);//numbers 1000-2000 [us] +-3 possible
   if(Pulsewidth_us<1000)Pulsewidth_us=1000;						//Saturate max Value
   else if(Pulsewidth_us>2000)Pulsewidth_us=2000;				//Saturate min Value
   PulsewidthCalc_us=Pulsewidth_us-1000;							//numbers 0-1000 [us]
+
+  //limit VALUE TO MAX PWM
+  PulsewidthCalc_us_limited=PulsewidthCalc_us;
+  if(PulsewidthCalc_us_limited>=200)PulsewidthCalc_us_limited=200;
+
+  //Manual spinning conditon
+  if(MotorStatus==0 && PulsewidthCalc_us >= MINSTARTTRESHOLD)
+  {
+	  MotorStatus=1;
+	  MotorStateManual=0;
+  }
+
+  //Stop condition
+  if(MotorStatus!=0 && PulsewidthCalc_us < MINSTARTTRESHOLD)
+  {
+	  MotorStatus=0;
+	  AllPhaseOFF();
+  }
+
+  //Manually change state to achieve spin
+  if(MotorStatus==1)
+  {
+	  statedelaycount++;
+	  if(statedelaycount>= MANUALSPINSTATEDELAY)
+	  {
+		  set_next_step(MotorStateManual,MAUNALPWMSTART);
+		  MotorStateManual++;
+		  if(MotorStateManual==6){MotorStateManual=0;}
+		  statedelaycount=0;
+	  }
+  }
 
   /* USER CODE END SysTick_IRQn 1 */
 }
@@ -203,6 +246,153 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32f1xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles TIM3 global interrupt.
+  */
+void TIM3_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM3_IRQn 0 */
+  LED_ON;
+  TIM3->SR &=~(TIM_SR_UIF); //clear UIF flag
+
+  static uint32_t Acrossstate;
+  static uint32_t Bcrossstate;
+  static uint32_t Ccrossstate;
+
+  uint32_t AcrossstateHist;
+  uint32_t BcrossstateHist;
+  uint32_t CcrossstateHist;
+
+  static uint32_t CurrentState=0;
+
+  uint32_t StateChangeValid=0;
+  uint32_t StateChange;
+  uint32_t StateChangeFlag;
+
+  static uint32_t cycles=0;
+  static uint32_t StateChangeCount=0;
+  static uint32_t DelayNextStep=0;
+
+  AcrossstateHist=Acrossstate;
+  BcrossstateHist=Bcrossstate;
+  CcrossstateHist=Ccrossstate;
+
+  Acrossstate=ACROSSSTAT;
+  Bcrossstate=BCROSSSTAT;
+  Ccrossstate=CCROSSSTAT;
+
+  if(Acrossstate!=AcrossstateHist)
+  {
+	  if(Acrossstate)
+	  {
+		  StateChange=4;
+	  }
+	  else
+	  {
+		  StateChange=1;
+	  }
+
+	  StateChangeFlag=1;
+  }
+
+  else if(Bcrossstate!=BcrossstateHist)
+  {
+	  if(Bcrossstate)
+	  {
+		  StateChange=0;
+	  }
+	  else
+	  {
+		  StateChange=3;
+	  }
+
+	  StateChangeFlag=1;
+  }
+
+  else if(Ccrossstate!=CcrossstateHist)
+  {
+	  if(Ccrossstate)
+	  {
+		  StateChange=2;
+	  }
+	  else
+	  {
+		  StateChange=5;
+	  }
+	  StateChangeFlag=1;
+  }
+
+  else StateChangeFlag=0;
+
+  if(StateChangeFlag)
+  {
+	  switch(StateChange)
+	  {
+	  	  case 0 : {
+	  		  	  	  if(CurrentState==5)StateChangeValid=1;
+	  	  	  	  	  else StateChangeValid=0;
+	  	  	  	   }break;
+	  	  case 1 : {
+	  		  	  	  if(CurrentState==0)StateChangeValid=1;
+	  	  	  	  	  else StateChangeValid=0;
+	  	  	  	   }break;
+	  	  case 2 : {
+	  		  	  	  if(CurrentState==1)StateChangeValid=1;
+	  	  	  	  	  else StateChangeValid=0;
+	  	  	  	   }break;
+	  	  case 3 : {
+	  		  	  	  if(CurrentState==2)StateChangeValid=1;
+	  	  	  	  	  else StateChangeValid=0;
+	  	  	  	   }break;
+	  	  case 4 : {
+	  		  	  	  if(CurrentState==3)StateChangeValid=1;
+	  	  	  	  	  else StateChangeValid=0;
+	  	  	  	   }break;
+	  	  case 5 : {
+	  		  	  	  if(CurrentState==4)StateChangeValid=1;
+	  	  	  	  	  else StateChangeValid=0;
+	  	  	  	   }break;
+	  }
+  }
+
+  //Estimate if motor is spinning enought to switch to AUTO state management
+  //Check 100ms time window 10us x 10000
+
+  if(MotorStatus==1)
+  {
+	  if(StateChangeFlag)
+	  {
+		  StateChangeCount++;
+	  }
+	  cycles++;
+
+	  if(StateChangeCount>MANUALTOAUTOTHRESHOULD)MotorStatus=2;
+
+	  else if(cycles>10000) //reset not enough rpm in 100ms
+	  {
+		  StateChangeCount=0;
+		  cycles=0;
+	  }
+  }
+  else if (MotorStatus==2)
+  {
+	  if(StateChangeValid && StateChangeFlag)
+	  {
+		  DelayNextStep=STEPPHASEDELAY;
+	  }
+	  if(DelayNextStep>=0)DelayNextStep--;
+	  else set_next_step(StateChange,PulsewidthCalc_us_limited);
+
+
+  }
+
+
+  LED_OFF;
+  /* USER CODE END TIM3_IRQn 0 */
+  /* USER CODE BEGIN TIM3_IRQn 1 */
+  /* USER CODE END TIM3_IRQn 1 */
+}
 
 /* USER CODE BEGIN 1 */
 

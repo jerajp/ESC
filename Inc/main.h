@@ -47,18 +47,27 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-#define LED_ON  GPIOB->BSRR=0x00000100  	//B8  1 << (8)
-#define LED_OFF GPIOB->BSRR=0x01000000      //B8  1 << (16+8)
+#define LED_ON  GPIOB->BSRR|=0x00000100  	//B8  1 << (8)
+#define LED_OFF GPIOB->BSRR|=0x01000000     //B8  1 << (16+8)
 
-#define ALowON  GPIOA->BSRR=0x00000008  	//A3  1 << (3)
-#define ALowOFF GPIOA->BSRR=0x00080000  	//A3  1 << (16+3)
+#define ALowON  GPIOA->BSRR|=0x00000008  	//A3  1 << (3)
+#define ALowOFF GPIOA->BSRR|=0x00080000  	//A3  1 << (16+3)
 
-#define BLowON  GPIOA->BSRR=0x00000010 		//A5  1 << (4)
-#define BLowOFF GPIOA->BSRR=0x00100000  	//A5  1 << (16+4)
+#define BLowON  GPIOA->BSRR|=0x00000010 	//A5  1 << (4)
+#define BLowOFF GPIOA->BSRR|=0x00100000  	//A5  1 << (16+4)
 
-#define CLowON  GPIOA->BSRR=0x00000020 		//A5  1 << (5)
-#define CLowOFF GPIOA->BSRR=0x00200000  	//A5  1 << (16+5)
+#define CLowON  GPIOA->BSRR|=0x00000020 	//A5  1 << (5)
+#define CLowOFF GPIOA->BSRR|=0x00200000  	//A5  1 << (16+5)
 
+#define ACROSSSTAT GPIOB->IDR & GPIO_IDR_IDR0
+#define BCROSSSTAT GPIOB->IDR & GPIO_IDR_IDR1
+#define CCROSSSTAT GPIOB->IDR & GPIO_IDR_IDR10
+
+#define MANUALSPINSTATEDELAY 5   //Delay between states in [ms] for manual spin
+#define MINSTARTTRESHOLD	50   //(Range 0 counts of 1000)
+#define MAUNALPWMSTART		100  //(Range 0 counts of 1000)
+#define MANUALTOAUTOTHRESHOULD 7 //7 state changes per 100ms -->100rpm ->1.66turn/s -> 70 state changes per second (6states repeat 7 times per turn)
+#define STEPPHASEDELAY 10
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
