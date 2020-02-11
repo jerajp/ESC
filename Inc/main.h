@@ -63,10 +63,10 @@ extern "C" {
 #define BCROSSSTAT GPIOB->IDR & GPIO_IDR_IDR1
 #define CCROSSSTAT GPIOB->IDR & GPIO_IDR_IDR10
 
-#define MANUALSPINSTATEDELAY 5   //Delay between states in [ms] for manual spin
+#define MANUALSPINSTATEDELAY 3   //Delay between states in [ms] for manual spin
 #define MINSTARTTRESHOLD	50   //(Range 0 counts of 1000)
 #define MAUNALPWMSTART		100  //(Range 0 counts of 1000)
-#define MANUALTOAUTOTHRESHOULD 7 //7 state changes per 100ms -->100rpm ->1.66turn/s -> 70 state changes per second (6states repeat 7 times per turn)
+#define MANUALTOAUTOTHRESHOULD 14 //7 state changes per 100ms -->100rpm ->1.66turn/s -> 70 state changes per second (6states repeat 7 times per turn)
 #define STEPPHASEDELAY 10
 /* USER CODE END EM */
 

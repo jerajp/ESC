@@ -47,11 +47,27 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 
 /* USER CODE BEGIN PV */
+uint32_t watchState0;
+uint32_t watchState1;
+uint32_t watchState2;
+uint32_t watchState3;
+uint32_t watchState4;
+uint32_t watchState5;
+
+uint32_t watchState0Err;
+uint32_t watchState1Err;
+uint32_t watchState2Err;
+uint32_t watchState3Err;
+uint32_t watchState4Err;
+uint32_t watchState5Err;
+
+uint32_t watchState;
+
 uint32_t watch1;
 uint32_t watch2;
 uint32_t watch3;
-uint32_t watch4;
-uint32_t watch5;
+uint32_t watchArray[1000];
+uint32_t MainLoop;
 
 /* USER CODE END PV */
 
@@ -134,7 +150,7 @@ int main(void)
 	  //fflush(stdout);
 	  //ITMstringSend("Hello\n\r",7); //more direct approach
 
-	  watch1++;
+	  MainLoop++;
 	  HAL_Delay(50);
 
   }

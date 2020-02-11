@@ -66,11 +66,23 @@ extern TIM_HandleTypeDef htim3;
 /* USER CODE BEGIN EV */
 extern TIM_HandleTypeDef htim1;
 
+extern uint32_t watchState0;
+extern uint32_t watchState1;
+extern uint32_t watchState2;
+extern uint32_t watchState3;
+extern uint32_t watchState4;
+extern uint32_t watchState5;
+extern uint32_t watchState0Err;
+extern uint32_t watchState1Err;
+extern uint32_t watchState2Err;
+extern uint32_t watchState3Err;
+extern uint32_t watchState4Err;
+extern uint32_t watchState5Err;
+extern uint32_t watchState;
 extern uint32_t watch1;
 extern uint32_t watch2;
 extern uint32_t watch3;
-extern uint32_t watch4;
-extern uint32_t watch5;
+extern uint32_t watchArray[1000];
 
 /* USER CODE END EV */
 
@@ -236,7 +248,7 @@ void SysTick_Handler(void)
 		  statedelaycount=0;
 	  }
   }
-
+  printf("MS=%u \n",MotorStatus);
   /* USER CODE END SysTick_IRQn 1 */
 }
 
@@ -265,13 +277,15 @@ void TIM3_IRQHandler(void)
   uint32_t CcrossstateHist;
 
   static uint32_t CurrentState=0;
+  static uint32_t ChangeStateFlag=0;
 
-  uint32_t StateChangeValid=0;
-  uint32_t StateChange;
-  uint32_t StateChangeFlag;
+
+  uint32_t ZeroCrossValid=0;
+  uint32_t ZeroCrossFlag;
+  static uint32_t ZeroCrossStateChange;
 
   static uint32_t cycles=0;
-  static uint32_t StateChangeCount=0;
+  static uint32_t ZeroCrossCount=0;
   static uint32_t DelayNextStep=0;
 
   AcrossstateHist=Acrossstate;
@@ -282,112 +296,219 @@ void TIM3_IRQHandler(void)
   Bcrossstate=BCROSSSTAT;
   Ccrossstate=CCROSSSTAT;
 
+  static uint32_t testcount=0;
+
+
   if(Acrossstate!=AcrossstateHist)
   {
 	  if(Acrossstate)
 	  {
-		  StateChange=4;
+		  ZeroCrossStateChange=2;//4;
+		  if(MotorStatus==1){CurrentState=1;}
+		  if(MotorStatus!=0)
+		  {
+			  watchArray[testcount]=ZeroCrossStateChange;
+			  if(testcount<999)testcount++;
+		  }
+
 	  }
 	  else
 	  {
-		  StateChange=1;
+		  ZeroCrossStateChange=3;//1;
+		  if(MotorStatus==1){CurrentState=2;}
+		  if(MotorStatus!=0)
+		  {
+			  watchArray[testcount]=ZeroCrossStateChange;
+			  if(testcount<999)testcount++;
+		  }
 	  }
 
-	  StateChangeFlag=1;
+	  ZeroCrossFlag=1;
   }
 
   else if(Bcrossstate!=BcrossstateHist)
   {
 	  if(Bcrossstate)
 	  {
-		  StateChange=0;
+		  ZeroCrossStateChange=4;//0;
+		  if(MotorStatus==1){CurrentState=3;}
+		  if(MotorStatus!=0)
+		  {
+			  watchArray[testcount]=ZeroCrossStateChange;
+			  if(testcount<999)testcount++;
+		  }
 	  }
 	  else
 	  {
-		  StateChange=3;
+		  ZeroCrossStateChange=5;//3;
+		  if(MotorStatus==1){CurrentState=4;}
+		  if(MotorStatus!=0)
+		  {
+			  watchArray[testcount]=ZeroCrossStateChange;
+			  if(testcount<999)testcount++;
+		  }
 	  }
 
-	  StateChangeFlag=1;
+	  ZeroCrossFlag=1;
   }
 
   else if(Ccrossstate!=CcrossstateHist)
   {
 	  if(Ccrossstate)
 	  {
-		  StateChange=2;
+		  ZeroCrossStateChange=0;//2;
+		  if(MotorStatus==1){CurrentState=5;}
+		  if(MotorStatus!=0)
+		  {
+			  watchArray[testcount]=ZeroCrossStateChange;
+			  if(testcount<999)testcount++;
+		  }
 	  }
 	  else
 	  {
-		  StateChange=5;
+		  ZeroCrossStateChange=1;//5;
+		  if(MotorStatus==1){CurrentState=0;}
+		  if(MotorStatus!=0)
+		  {
+			  watchArray[testcount]=ZeroCrossStateChange;
+			  if(testcount<999)testcount++;
+		  }
 	  }
-	  StateChangeFlag=1;
+	  ZeroCrossFlag=1;
   }
 
-  else StateChangeFlag=0;
+  else ZeroCrossFlag=0;
 
-  if(StateChangeFlag)
+
+  if(ZeroCrossFlag)
   {
-	  switch(StateChange)
+	  switch(ZeroCrossStateChange)
 	  {
 	  	  case 0 : {
-	  		  	  	  if(CurrentState==5)StateChangeValid=1;
-	  	  	  	  	  else StateChangeValid=0;
+	  		  	  	  if(CurrentState==5)
+	  		  	  	  {
+	  		  	  		  ZeroCrossValid=1;
+	  		  	  		  watchState0++;
+	  		  	  	  }
+	  	  	  	  	  else
+	  	  	  	  	  {
+	  	  	  	  		  ZeroCrossValid=0;
+	  	  	  	  	      watchState0Err++;
+	  	  	  	  	  }
 	  	  	  	   }break;
 	  	  case 1 : {
-	  		  	  	  if(CurrentState==0)StateChangeValid=1;
-	  	  	  	  	  else StateChangeValid=0;
+	  		  	  	  if(CurrentState==0)
+	  		  	  	  {
+	  		  	  		  ZeroCrossValid=1;
+	  		  	  		  watchState1++;
+	  		  	  	  }
+	  	  	  	  	  else
+	  	  	  	  	  {
+	  	  	  	  		  ZeroCrossValid=0;
+	  	  	  	  		  watchState1Err++;
+	  	  	  	  	  }
 	  	  	  	   }break;
 	  	  case 2 : {
-	  		  	  	  if(CurrentState==1)StateChangeValid=1;
-	  	  	  	  	  else StateChangeValid=0;
+	  		  	  	  if(CurrentState==1)
+	  		  	  	  {
+	  		  	  		  ZeroCrossValid=1;
+	  		  	  		  watchState2++;
+	  		  	  	  }
+	  	  	  	  	  else
+	  	  	  	      {
+	  	  	  	  		  ZeroCrossValid=0;
+	  	  	  	  		  watchState2Err++;
+	  	  	  	      }
 	  	  	  	   }break;
 	  	  case 3 : {
-	  		  	  	  if(CurrentState==2)StateChangeValid=1;
-	  	  	  	  	  else StateChangeValid=0;
+	  		  	  	  if(CurrentState==2)
+	  		  	  	  {
+	  		  	  		  ZeroCrossValid=1;
+	  		  	  		  watchState3++;
+	  		  	  	  }
+	  	  	  	  	  else
+	  	  	  	      {
+	  	  	  	  		  ZeroCrossValid=0;
+	  	  	  	  		  watchState3Err++;
+	  	  	  	      }
 	  	  	  	   }break;
 	  	  case 4 : {
-	  		  	  	  if(CurrentState==3)StateChangeValid=1;
-	  	  	  	  	  else StateChangeValid=0;
+	  		  	  	  if(CurrentState==3)
+	  		  	  	  {
+	  		  	  		  ZeroCrossValid=1;
+	  		  	  		  watchState4++;
+	  		  	  	  }
+	  	  	  	  	  else
+	  	  	  	  	  {
+	  	  	  	  		  ZeroCrossValid=0;
+	  	  	  	  		  watchState4Err++;
+	  	  	  	  	  }
 	  	  	  	   }break;
 	  	  case 5 : {
-	  		  	  	  if(CurrentState==4)StateChangeValid=1;
-	  	  	  	  	  else StateChangeValid=0;
+	  		  	  	  if(CurrentState==4)
+	  		  	  	  {
+	  		  	  		  ZeroCrossValid=1;
+	  		  	  		  watchState5++;
+	  		  	  	  }
+	  	  	  	  	  else
+	  	  	  	      {
+	  	  	  	  		  ZeroCrossValid=0;
+	  	  	  	  		  watchState5Err++;
+	  	  	  	      }
 	  	  	  	   }break;
 	  }
   }
 
-  //Estimate if motor is spinning enought to switch to AUTO state management
+  //Estimate if motor is spinning enough to switch to AUTO state management
   //Check 100ms time window 10us x 10000
 
   if(MotorStatus==1)
   {
-	  if(StateChangeFlag)
+	  if(ZeroCrossFlag)
 	  {
-		  StateChangeCount++;
+		  ZeroCrossCount++;
 	  }
 	  cycles++;
 
-	  if(StateChangeCount>MANUALTOAUTOTHRESHOULD)MotorStatus=2;
+	  if(ZeroCrossCount>MANUALTOAUTOTHRESHOULD)
+	  {
+		  MotorStatus=2; 		//start auto spin
+		  ZeroCrossCount=0;		//reset
+		  cycles=0;				//reset
+	  }
 
 	  else if(cycles>10000) //reset not enough rpm in 100ms
 	  {
-		  StateChangeCount=0;
+		  ZeroCrossCount=0;
 		  cycles=0;
 	  }
   }
   else if (MotorStatus==2)
   {
-	  if(StateChangeValid && StateChangeFlag)
+	  watch1++;
+
+	  if(ZeroCrossValid && ZeroCrossFlag)
 	  {
-		  DelayNextStep=STEPPHASEDELAY;
+		  watch2++;
+		  ChangeStateFlag=1; 			//Trigger State change
+		  DelayNextStep=STEPPHASEDELAY; //State change after delay
 	  }
-	  if(DelayNextStep>=0)DelayNextStep--;
-	  else set_next_step(StateChange,PulsewidthCalc_us_limited);
 
+	  else if(ChangeStateFlag)
+	  {
 
+		  if(DelayNextStep>0)DelayNextStep--;
+		  else
+		  {
+			  set_next_step(ZeroCrossStateChange,PulsewidthCalc_us_limited);
+			  CurrentState=ZeroCrossStateChange; //set new state
+			  ChangeStateFlag=0; 				//reset
+			  watch3++;
+		  }
+	  }
   }
 
-
+  watchState=CurrentState;
   LED_OFF;
   /* USER CODE END TIM3_IRQn 0 */
   /* USER CODE BEGIN TIM3_IRQn 1 */
