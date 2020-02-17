@@ -49,6 +49,7 @@ uint32_t PulsewidthCalc_us_limited=0;
 uint32_t statedelaycount=0;
 uint32_t MotorStateManual=0;
 uint32_t MotorStatus=0; //0-OFF, 1-MANUAL, 2-AUTO
+uint32_t ZeroCrossCount=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -220,7 +221,7 @@ void SysTick_Handler(void)
 
   //limit VALUE TO MAX PWM
   PulsewidthCalc_us_limited=PulsewidthCalc_us;
-  if(PulsewidthCalc_us_limited>=200)PulsewidthCalc_us_limited=200;
+  if(PulsewidthCalc_us_limited>=PWM_MAX_LIMIT)PulsewidthCalc_us_limited=PWM_MAX_LIMIT;
 
   //Manual spinning conditon
   if(MotorStatus==0 && PulsewidthCalc_us >= MINSTARTTRESHOLD)
@@ -260,6 +261,42 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles EXTI line0 interrupt.
+  */
+void EXTI0_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI0_IRQn 0 */
+
+  /* USER CODE END EXTI0_IRQn 0 */
+  /* USER CODE BEGIN EXTI0_IRQn 1 */
+
+  EXTI->PR |=(EXTI_PR_PR0); //clear IT flag
+  watch1++;
+  SetNextState(&MotorStatus, &PulsewidthCalc_us_limited, &ZeroCrossCount);
+
+
+  /* USER CODE END EXTI0_IRQn 1 */
+}
+
+/**
+  * @brief This function handles EXTI line1 interrupt.
+  */
+void EXTI1_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI1_IRQn 0 */
+
+  /* USER CODE END EXTI1_IRQn 0 */
+  /* USER CODE BEGIN EXTI1_IRQn 1 */
+
+  EXTI->PR |=(EXTI_PR_PR1); //clear IT flag
+  watch2++;
+  SetNextState(&MotorStatus, &PulsewidthCalc_us_limited, &ZeroCrossCount);
+
+
+  /* USER CODE END EXTI1_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM3 global interrupt.
   */
 void TIM3_IRQHandler(void)
@@ -268,251 +305,41 @@ void TIM3_IRQHandler(void)
   LED_ON;
   TIM3->SR &=~(TIM_SR_UIF); //clear UIF flag
 
-  static uint32_t Acrossstate;
-  static uint32_t Bcrossstate;
-  static uint32_t Ccrossstate;
-
-  uint32_t AcrossstateHist;
-  uint32_t BcrossstateHist;
-  uint32_t CcrossstateHist;
-
-  static uint32_t CurrentState=0;
-  static uint32_t ChangeStateFlag=0;
-
-
-  uint32_t ZeroCrossValid=0;
-  uint32_t ZeroCrossFlag;
-  static uint32_t ZeroCrossStateChange;
-
-  static uint32_t cycles=0;
-  static uint32_t ZeroCrossCount=0;
-  static uint32_t DelayNextStep=0;
-
-  AcrossstateHist=Acrossstate;
-  BcrossstateHist=Bcrossstate;
-  CcrossstateHist=Ccrossstate;
-
-  Acrossstate=ACROSSSTAT;
-  Bcrossstate=BCROSSSTAT;
-  Ccrossstate=CCROSSSTAT;
-
-  static uint32_t testcount=0;
-
-
-  if(Acrossstate!=AcrossstateHist)
-  {
-	  if(Acrossstate)
-	  {
-		  ZeroCrossStateChange=2;//4;
-		  if(MotorStatus==1){CurrentState=1;}
-		  if(MotorStatus!=0)
-		  {
-			  watchArray[testcount]=ZeroCrossStateChange;
-			  if(testcount<999)testcount++;
-		  }
-
-	  }
-	  else
-	  {
-		  ZeroCrossStateChange=3;//1;
-		  if(MotorStatus==1){CurrentState=2;}
-		  if(MotorStatus!=0)
-		  {
-			  watchArray[testcount]=ZeroCrossStateChange;
-			  if(testcount<999)testcount++;
-		  }
-	  }
-
-	  ZeroCrossFlag=1;
-  }
-
-  else if(Bcrossstate!=BcrossstateHist)
-  {
-	  if(Bcrossstate)
-	  {
-		  ZeroCrossStateChange=4;//0;
-		  if(MotorStatus==1){CurrentState=3;}
-		  if(MotorStatus!=0)
-		  {
-			  watchArray[testcount]=ZeroCrossStateChange;
-			  if(testcount<999)testcount++;
-		  }
-	  }
-	  else
-	  {
-		  ZeroCrossStateChange=5;//3;
-		  if(MotorStatus==1){CurrentState=4;}
-		  if(MotorStatus!=0)
-		  {
-			  watchArray[testcount]=ZeroCrossStateChange;
-			  if(testcount<999)testcount++;
-		  }
-	  }
-
-	  ZeroCrossFlag=1;
-  }
-
-  else if(Ccrossstate!=CcrossstateHist)
-  {
-	  if(Ccrossstate)
-	  {
-		  ZeroCrossStateChange=0;//2;
-		  if(MotorStatus==1){CurrentState=5;}
-		  if(MotorStatus!=0)
-		  {
-			  watchArray[testcount]=ZeroCrossStateChange;
-			  if(testcount<999)testcount++;
-		  }
-	  }
-	  else
-	  {
-		  ZeroCrossStateChange=1;//5;
-		  if(MotorStatus==1){CurrentState=0;}
-		  if(MotorStatus!=0)
-		  {
-			  watchArray[testcount]=ZeroCrossStateChange;
-			  if(testcount<999)testcount++;
-		  }
-	  }
-	  ZeroCrossFlag=1;
-  }
-
-  else ZeroCrossFlag=0;
-
-
-  if(ZeroCrossFlag)
-  {
-	  switch(ZeroCrossStateChange)
-	  {
-	  	  case 0 : {
-	  		  	  	  if(CurrentState==5)
-	  		  	  	  {
-	  		  	  		  ZeroCrossValid=1;
-	  		  	  		  watchState0++;
-	  		  	  	  }
-	  	  	  	  	  else
-	  	  	  	  	  {
-	  	  	  	  		  ZeroCrossValid=0;
-	  	  	  	  	      watchState0Err++;
-	  	  	  	  	  }
-	  	  	  	   }break;
-	  	  case 1 : {
-	  		  	  	  if(CurrentState==0)
-	  		  	  	  {
-	  		  	  		  ZeroCrossValid=1;
-	  		  	  		  watchState1++;
-	  		  	  	  }
-	  	  	  	  	  else
-	  	  	  	  	  {
-	  	  	  	  		  ZeroCrossValid=0;
-	  	  	  	  		  watchState1Err++;
-	  	  	  	  	  }
-	  	  	  	   }break;
-	  	  case 2 : {
-	  		  	  	  if(CurrentState==1)
-	  		  	  	  {
-	  		  	  		  ZeroCrossValid=1;
-	  		  	  		  watchState2++;
-	  		  	  	  }
-	  	  	  	  	  else
-	  	  	  	      {
-	  	  	  	  		  ZeroCrossValid=0;
-	  	  	  	  		  watchState2Err++;
-	  	  	  	      }
-	  	  	  	   }break;
-	  	  case 3 : {
-	  		  	  	  if(CurrentState==2)
-	  		  	  	  {
-	  		  	  		  ZeroCrossValid=1;
-	  		  	  		  watchState3++;
-	  		  	  	  }
-	  	  	  	  	  else
-	  	  	  	      {
-	  	  	  	  		  ZeroCrossValid=0;
-	  	  	  	  		  watchState3Err++;
-	  	  	  	      }
-	  	  	  	   }break;
-	  	  case 4 : {
-	  		  	  	  if(CurrentState==3)
-	  		  	  	  {
-	  		  	  		  ZeroCrossValid=1;
-	  		  	  		  watchState4++;
-	  		  	  	  }
-	  	  	  	  	  else
-	  	  	  	  	  {
-	  	  	  	  		  ZeroCrossValid=0;
-	  	  	  	  		  watchState4Err++;
-	  	  	  	  	  }
-	  	  	  	   }break;
-	  	  case 5 : {
-	  		  	  	  if(CurrentState==4)
-	  		  	  	  {
-	  		  	  		  ZeroCrossValid=1;
-	  		  	  		  watchState5++;
-	  		  	  	  }
-	  	  	  	  	  else
-	  	  	  	      {
-	  	  	  	  		  ZeroCrossValid=0;
-	  	  	  	  		  watchState5Err++;
-	  	  	  	      }
-	  	  	  	   }break;
-	  }
-  }
 
   //Estimate if motor is spinning enough to switch to AUTO state management
-  //Check 100ms time window 10us x 10000
 
-  if(MotorStatus==1)
+  if(MotorStatus==1 && ZeroCrossCount>MANUALTOAUTOTHRESHOULD)
   {
-	  if(ZeroCrossFlag)
-	  {
-		  ZeroCrossCount++;
-	  }
-	  cycles++;
-
-	  if(ZeroCrossCount>MANUALTOAUTOTHRESHOULD)
-	  {
-		  MotorStatus=2; 		//start auto spin
-		  ZeroCrossCount=0;		//reset
-		  cycles=0;				//reset
-	  }
-
-	  else if(cycles>10000) //reset not enough rpm in 100ms
-	  {
-		  ZeroCrossCount=0;
-		  cycles=0;
-	  }
+	  MotorStatus=2;
+	  ZeroCrossCount=0;
   }
-  else if (MotorStatus==2)
+  if(MotorStatus==0)
   {
-	  watch1++;
-
-	  if(ZeroCrossValid && ZeroCrossFlag)
-	  {
-		  watch2++;
-		  ChangeStateFlag=1; 			//Trigger State change
-		  DelayNextStep=STEPPHASEDELAY; //State change after delay
-	  }
-
-	  else if(ChangeStateFlag)
-	  {
-
-		  if(DelayNextStep>0)DelayNextStep--;
-		  else
-		  {
-			  set_next_step(ZeroCrossStateChange,PulsewidthCalc_us_limited);
-			  CurrentState=ZeroCrossStateChange; //set new state
-			  ChangeStateFlag=0; 				//reset
-			  watch3++;
-		  }
-	  }
+	  ZeroCrossCount=0;
   }
 
-  watchState=CurrentState;
   LED_OFF;
   /* USER CODE END TIM3_IRQn 0 */
   /* USER CODE BEGIN TIM3_IRQn 1 */
   /* USER CODE END TIM3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles EXTI line[15:10] interrupts.
+  */
+void EXTI15_10_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+
+  /* USER CODE END EXTI15_10_IRQn 0 */
+  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+
+  EXTI->PR |=(EXTI_PR_PR10); //clear IT flag
+  watch3++;
+  SetNextState(&MotorStatus, &PulsewidthCalc_us_limited, &ZeroCrossCount);
+
+
+  /* USER CODE END EXTI15_10_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
