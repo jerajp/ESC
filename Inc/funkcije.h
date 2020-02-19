@@ -13,7 +13,7 @@ void CH_BL(uint32_t Pulsewidth);
 void AllPhaseOFF();
 
 void set_next_step(uint32_t state, uint32_t Pulsewidth);
-void SetNextState(uint32_t * MotoStat, uint32_t * PWMValue, uint32_t * ZeroCrossCnt);
+void SetNextState(uint32_t * MotoStat, uint32_t * PWMValue);
 
 
 extern uint32_t watch1;

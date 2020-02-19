@@ -63,13 +63,22 @@ extern "C" {
 #define BCROSSSTAT GPIOB->IDR & GPIO_IDR_IDR1
 #define CCROSSSTAT GPIOB->IDR & GPIO_IDR_IDR10
 
-#define MANUALSPINSTATEDELAY 4   //Delay between states in [ms] for manual spin
-#define MINSTARTTRESHOLD	50   //(Range 0 counts of 1000)
-#define MAUNALPWMSTART		100  //(Range 0 counts of 1000)
-#define MANUALTOAUTOTHRESHOULD 100 //Zero crossings
+#define MANUALSPINSTATEDELAY 397      //Delay between states in 10us cyles for 360RPM -> 6turn/s ->x42 state changes/turn
+//time between states 1/252 seconds -->3968us delay ->397 (10us) cycles
+#define MINSTARTTRESHOLD	50       //(Range 0 counts of 1000)
+#define MAUNALPWMSTART		100      //(Range 0 counts of 1000)
 #define PWM_MAX_LIMIT 1000
+#define PWMSTEP 1
 
-//Motor Spec-> 7 state sequence changes per Turn
+#define MANUALTOAUTORPMTHRESHOLD 200 //RPM
+#define CYCLESWITHMINTRPM  		 1000 //10ms
+
+//RPM TIMING
+#define MEASURETIMEMILISECOND 10 	 //10ms measure window
+#define ONESECONDTOMILISECOND 1000   //1000ms
+#define RPMTORPS  			  60     //1 RPM-->60 Rounds per second
+#define ZEROCROSSPERTURN      42     //6 zero cross per 1/7 mechanical turn->42 crossings per turn
+
 
 /* USER CODE END EM */
 

@@ -43,13 +43,16 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
+
+//PWM
 uint32_t Pulsewidth_us=0;
 uint32_t PulsewidthCalc_us=0;
 uint32_t PulsewidthCalc_us_limited=0;
-uint32_t statedelaycount=0;
-uint32_t MotorStateManual=0;
+uint32_t PulsewidthCalc_us_limited_smooth=0;
+
 uint32_t MotorStatus=0; //0-OFF, 1-MANUAL, 2-AUTO
 uint32_t ZeroCrossCount=0;
+uint32_t MotorRPM=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -223,32 +226,6 @@ void SysTick_Handler(void)
   PulsewidthCalc_us_limited=PulsewidthCalc_us;
   if(PulsewidthCalc_us_limited>=PWM_MAX_LIMIT)PulsewidthCalc_us_limited=PWM_MAX_LIMIT;
 
-  //Manual spinning conditon
-  if(MotorStatus==0 && PulsewidthCalc_us >= MINSTARTTRESHOLD)
-  {
-	  MotorStatus=1;
-	  MotorStateManual=0;
-  }
-
-  //Stop condition
-  if(MotorStatus!=0 && PulsewidthCalc_us < MINSTARTTRESHOLD)
-  {
-	  MotorStatus=0;
-	  AllPhaseOFF();
-  }
-
-  //Manually change state to achieve spin
-  if(MotorStatus==1)
-  {
-	  statedelaycount++;
-	  if(statedelaycount>= MANUALSPINSTATEDELAY)
-	  {
-		  set_next_step(MotorStateManual,MAUNALPWMSTART);
-		  MotorStateManual++;
-		  if(MotorStateManual==6){MotorStateManual=0;}
-		  statedelaycount=0;
-	  }
-  }
   printf("MS=%u \n",MotorStatus);
   /* USER CODE END SysTick_IRQn 1 */
 }
@@ -272,8 +249,8 @@ void EXTI0_IRQHandler(void)
 
   EXTI->PR |=(EXTI_PR_PR0); //clear IT flag
   watch1++;
-  SetNextState(&MotorStatus, &PulsewidthCalc_us_limited, &ZeroCrossCount);
-
+  SetNextState(&MotorStatus, &PulsewidthCalc_us_limited_smooth);
+  ZeroCrossCount++;
 
   /* USER CODE END EXTI0_IRQn 1 */
 }
@@ -290,8 +267,8 @@ void EXTI1_IRQHandler(void)
 
   EXTI->PR |=(EXTI_PR_PR1); //clear IT flag
   watch2++;
-  SetNextState(&MotorStatus, &PulsewidthCalc_us_limited, &ZeroCrossCount);
-
+  SetNextState(&MotorStatus, &PulsewidthCalc_us_limited_smooth);
+  ZeroCrossCount++;
 
   /* USER CODE END EXTI1_IRQn 1 */
 }
@@ -305,18 +282,114 @@ void TIM3_IRQHandler(void)
   LED_ON;
   TIM3->SR &=~(TIM_SR_UIF); //clear UIF flag
 
+  static uint32_t timestep=0;
+  static uint32_t ManualRPMstablecount=0;
+  static uint32_t AutoRPMnotstablecount=0;
+  static uint32_t ManualSpinstatedelay=0;
+  static uint32_t MotorStateManual=0;
+  int32_t DeltaPWMsign=0;
 
-  //Estimate if motor is spinning enough to switch to AUTO state management
 
-  if(MotorStatus==1 && ZeroCrossCount>MANUALTOAUTOTHRESHOULD)
+  //MANUAL SPIN ROUTINE
+  if(MotorStatus==0 && PulsewidthCalc_us >= MINSTARTTRESHOLD)
   {
-	  MotorStatus=2;
-	  ZeroCrossCount=0;
+	  MotorStatus=1;
+	  MotorStateManual=0;
+	  ManualRPMstablecount=0;
+	  AutoRPMnotstablecount=0;
   }
+
+  //Manually change state to achieve spin
+  if(MotorStatus==1)
+  {
+	  ManualSpinstatedelay++;
+	  if(ManualSpinstatedelay>= MANUALSPINSTATEDELAY)
+	  {
+		  set_next_step(MotorStateManual,MAUNALPWMSTART);
+		  MotorStateManual++;
+		  if(MotorStateManual==6){MotorStateManual=0;}
+		  ManualSpinstatedelay=0;
+	  }
+  }
+
+  //Estimate if motor is with ENOUGH RPM FOR ENOUGH TIME TO SWITCH TO AUTO SPIN(MotorStatus=2)
+  if(MotorStatus==1 && MotorRPM>MANUALTOAUTORPMTHRESHOLD)
+  {
+	  ManualRPMstablecount++;
+	  if(ManualRPMstablecount>CYCLESWITHMINTRPM)
+	  {
+		  MotorStatus=2;
+		  PulsewidthCalc_us_limited_smooth=MAUNALPWMSTART;
+	  }
+  }
+
+  //APPROACH SET PWM----------------------------------------------------------
+  if(MotorStatus==2)
+  {
+	  DeltaPWMsign=PulsewidthCalc_us_limited-PulsewidthCalc_us_limited_smooth;
+
+	  if(DeltaPWMsign < (int32_t)(0)) //PWM increase
+	  {
+		  if(  (uint32_t)(DeltaPWMsign*(-1)) > PWMSTEP)
+		  {
+			  if(PulsewidthCalc_us_limited_smooth>PWMSTEP)
+			  {
+				  PulsewidthCalc_us_limited_smooth-=PWMSTEP;
+			  }
+		  }
+	  }
+	  else
+	  {
+		  if(  (uint32_t)(DeltaPWMsign) > PWMSTEP)
+		  {
+			  PulsewidthCalc_us_limited_smooth+=PWMSTEP;
+
+			  if(PulsewidthCalc_us_limited_smooth>PulsewidthCalc_us_limited)
+			  {
+				  PulsewidthCalc_us_limited_smooth=PulsewidthCalc_us_limited;
+			  }
+		  }
+	  }
+  }//------------------------------------------------------------------------
+
+  //Keep ZeroCross value at 0
   if(MotorStatus==0)
   {
 	  ZeroCrossCount=0;
   }
+
+  //Measure RPM-----STAT 1----------------------------
+  if(MotorStatus==2 || MotorStatus==1)
+  {
+	  timestep++;
+	  if(timestep==(MEASURETIMEMILISECOND*100) ) //100x10us (IT cycle) =1ms
+	  {
+		MotorRPM=(ZeroCrossCount*RPMTORPS*ONESECONDTOMILISECOND)/(MEASURETIMEMILISECOND*ZEROCROSSPERTURN);
+		ZeroCrossCount=0;
+		timestep=0;
+	  }
+  }
+
+  //MOTOR STATUS ->0 PWM TOO LOW---------------------------------------
+  if(MotorStatus!=0 && PulsewidthCalc_us < MINSTARTTRESHOLD)
+  {
+	  MotorStatus=0;
+	  AllPhaseOFF();
+  }
+
+  //MOTOR STATUS ->0 RPM TOO LOW--------------------------------------
+//  if(MotorStatus==2)
+//  {
+//	  if(MotorRPM<MANUALTOAUTORPMTHRESHOLD)
+//	  {
+//		  AutoRPMnotstablecount++;
+//	  }
+//
+//	  if(AutoRPMnotstablecount>CYCLESWITHMINTRPM)
+//	  {
+//		  MotorStatus=0;
+//	  }
+//  }
 
   LED_OFF;
   /* USER CODE END TIM3_IRQn 0 */
@@ -336,8 +409,8 @@ void EXTI15_10_IRQHandler(void)
 
   EXTI->PR |=(EXTI_PR_PR10); //clear IT flag
   watch3++;
-  SetNextState(&MotorStatus, &PulsewidthCalc_us_limited, &ZeroCrossCount);
-
+  SetNextState(&MotorStatus, &PulsewidthCalc_us_limited_smooth);
+  ZeroCrossCount++;
 
   /* USER CODE END EXTI15_10_IRQn 1 */
 }

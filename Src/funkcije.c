@@ -181,7 +181,7 @@ void set_next_step(uint32_t state, uint32_t Pulsewidth)
   }
 }
 
-void SetNextState(uint32_t * MotoStat, uint32_t * PWMValue, uint32_t * ZeroCrossCnt)
+void SetNextState(uint32_t * MotoStat, uint32_t * PWMValue)
 {
 	static uint32_t Acrossstate;
 	static uint32_t Bcrossstate;
@@ -214,20 +214,21 @@ void SetNextState(uint32_t * MotoStat, uint32_t * PWMValue, uint32_t * ZeroCross
 		if(Acrossstate)
 		{
 			ZeroCrossStateChange=1;
+
 			if(*MotoStat==1)
 			{
 				CurrentState=0;
-				*ZeroCrossCnt=*ZeroCrossCnt+1;
 			}
 		}
 		else
 		{
 			ZeroCrossStateChange=2;
+
 			if(*MotoStat==1)
 			{
 				CurrentState=1;
-				*ZeroCrossCnt=*ZeroCrossCnt+1;
 			}
+
 		}
 		ZeroCrossFlag=1;
 	}
@@ -237,21 +238,20 @@ void SetNextState(uint32_t * MotoStat, uint32_t * PWMValue, uint32_t * ZeroCross
 		if(Bcrossstate)
 		{
 			ZeroCrossStateChange=3;
+
 			if(*MotoStat==1)
 			{
 				CurrentState=2;
-				*ZeroCrossCnt=*ZeroCrossCnt+1;
 			}
 		}
 		else
 		{
 			ZeroCrossStateChange=4;
+
 			if(*MotoStat==1)
 			{
 				CurrentState=3;
-				*ZeroCrossCnt=*ZeroCrossCnt+1;
 			}
-
 		}
 		ZeroCrossFlag=1;
 	}
@@ -261,19 +261,19 @@ void SetNextState(uint32_t * MotoStat, uint32_t * PWMValue, uint32_t * ZeroCross
 		if(Ccrossstate)
 		{
 			ZeroCrossStateChange=5;
+
 			if(*MotoStat==1)
 			{
 				CurrentState=4;
-				*ZeroCrossCnt=*ZeroCrossCnt+1;
 			}
 		}
 		else
 		{
 			ZeroCrossStateChange=0;
+
 			if(*MotoStat==1)
 			{
 				CurrentState=5;
-				*ZeroCrossCnt=*ZeroCrossCnt+1;
 			}
 		}
 		ZeroCrossFlag=1;
