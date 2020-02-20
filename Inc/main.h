@@ -63,15 +63,22 @@ extern "C" {
 #define BCROSSSTAT GPIOB->IDR & GPIO_IDR_IDR1
 #define CCROSSSTAT GPIOB->IDR & GPIO_IDR_IDR10
 
-#define MANUALSPINSTATEDELAY 397      //Delay between states in 10us cyles for 360RPM -> 6turn/s ->x42 state changes/turn
-//time between states 1/252 seconds -->3968us delay ->397 (10us) cycles
-#define MINSTARTTRESHOLD	50       //(Range 0 counts of 1000)
-#define MAUNALPWMSTART		100      //(Range 0 counts of 1000)
-#define PWM_MAX_LIMIT 1000
-#define PWMSTEP 1
+#define MANUALSPINSTATEDELAYMIN  100      	//minimum delay between states x10us
+#define MANUALSPINSTATEDELAY 	 397      	//Delay between states in 10us cyles for 360RPM -> 6turn/s ->x42 state changes/turn -time between states 1/252 seconds -->3968us delay ->397 (10us) cycles
+#define MAUNALPWM				 100      	//(Range 0 counts of 1000)
+#define MANAULDELAYDECREASE		 2			//PWM decrease per cycle
+#define MANUALTOAUTORPMTHRESHOLD 1000 		//RPM switch to auto
+#define CYCLESWITHMANUALRPM		 2000       //min 20ms in MANUAL MODE
+#define CYCLESWITHMINTRPM  		 1000   	//10ms <MIN RPM ->switch OFF
+#define MOTORSTATUSONETIMEOUT    50000 		//0.5sec if Motor doesn't start return back to Zero State
 
-#define MANUALTOAUTORPMTHRESHOLD 200 //RPM
-#define CYCLESWITHMINTRPM  		 1000 //10ms
+#define MINSTARTTRESHOLD	     50       	//(Range 0 counts of 1000)
+#define PWM_MAX_LIMIT 		     1000
+
+//PWM REFERENCE CLOSING IN TO ACTUAL PWM
+#define PWMSTEP 1
+#define SMOOTHCYCLES 50 //10 too fast falls out of sync
+
 
 //RPM TIMING
 #define MEASURETIMEMILISECOND 10 	 //10ms measure window

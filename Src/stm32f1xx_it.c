@@ -285,8 +285,11 @@ void TIM3_IRQHandler(void)
   static uint32_t timestep=0;
   static uint32_t ManualRPMstablecount=0;
   static uint32_t AutoRPMnotstablecount=0;
-  static uint32_t ManualSpinstatedelay=0;
+  static uint32_t ManualSpinstateDelay=0;
+  static uint32_t ManualSpinDelayDecrease=0;
   static uint32_t MotorStateManual=0;
+  static uint32_t SmoothLoopcount=0;
+  static uint32_t MotorStatusTimeout=0;
   int32_t DeltaPWMsign=0;
 
 
@@ -297,18 +300,37 @@ void TIM3_IRQHandler(void)
 	  MotorStateManual=0;
 	  ManualRPMstablecount=0;
 	  AutoRPMnotstablecount=0;
+	  ManualSpinstateDelay=MANUALSPINSTATEDELAY;
+	  ManualSpinDelayDecrease=0;
+	  MotorStatusTimeout=0;
   }
 
   //Manually change state to achieve spin
   if(MotorStatus==1)
   {
-	  ManualSpinstatedelay++;
-	  if(ManualSpinstatedelay>= MANUALSPINSTATEDELAY)
+	  ManualSpinstateDelay--;
+
+	  if(ManualSpinstateDelay==0)
 	  {
-		  set_next_step(MotorStateManual,MAUNALPWMSTART);
+		  set_next_step(MotorStateManual,MAUNALPWM);
 		  MotorStateManual++;
 		  if(MotorStateManual==6){MotorStateManual=0;}
-		  ManualSpinstatedelay=0;
+
+		  if( (MANUALSPINSTATEDELAY-ManualSpinDelayDecrease)< MANUALSPINSTATEDELAYMIN)
+		  {
+			  ManualSpinstateDelay=MANUALSPINSTATEDELAYMIN; //min delay between states in manual mode in 10us increments
+
+		  }
+		  else
+		  {
+			  ManualSpinDelayDecrease+=MANAULDELAYDECREASE;
+			  ManualSpinstateDelay=MANUALSPINSTATEDELAY-ManualSpinDelayDecrease;
+		  }
+	  }
+	  MotorStatusTimeout++;
+	  if(MotorStatusTimeout>=MOTORSTATUSONETIMEOUT)
+	  {
+		  MotorStatus=0;
 	  }
   }
 
@@ -316,10 +338,10 @@ void TIM3_IRQHandler(void)
   if(MotorStatus==1 && MotorRPM>MANUALTOAUTORPMTHRESHOLD)
   {
 	  ManualRPMstablecount++;
-	  if(ManualRPMstablecount>CYCLESWITHMINTRPM)
+	  if(ManualRPMstablecount>CYCLESWITHMANUALRPM)
 	  {
 		  MotorStatus=2;
-		  PulsewidthCalc_us_limited_smooth=MAUNALPWMSTART;
+		  PulsewidthCalc_us_limited_smooth=MAUNALPWM;
 	  }
   }
 
@@ -328,27 +350,32 @@ void TIM3_IRQHandler(void)
   {
 	  DeltaPWMsign=PulsewidthCalc_us_limited-PulsewidthCalc_us_limited_smooth;
 
-	  if(DeltaPWMsign < (int32_t)(0)) //PWM increase
+	  SmoothLoopcount++;
+	  if(SmoothLoopcount>=SMOOTHCYCLES)
 	  {
-		  if(  (uint32_t)(DeltaPWMsign*(-1)) > PWMSTEP)
+		  if(DeltaPWMsign < (int32_t)(0)) //PWM increase
 		  {
-			  if(PulsewidthCalc_us_limited_smooth>PWMSTEP)
+			  if(  (uint32_t)(DeltaPWMsign*(-1)) > PWMSTEP)
 			  {
-				  PulsewidthCalc_us_limited_smooth-=PWMSTEP;
+				  if(PulsewidthCalc_us_limited_smooth>PWMSTEP)
+				  {
+					  PulsewidthCalc_us_limited_smooth-=PWMSTEP;
+				  }
 			  }
 		  }
-	  }
-	  else
-	  {
-		  if(  (uint32_t)(DeltaPWMsign) > PWMSTEP)
+		  else
 		  {
-			  PulsewidthCalc_us_limited_smooth+=PWMSTEP;
+			  if(  (uint32_t)(DeltaPWMsign) > PWMSTEP)
+			  {
+				  PulsewidthCalc_us_limited_smooth+=PWMSTEP;
 
-			  if(PulsewidthCalc_us_limited_smooth>PulsewidthCalc_us_limited)
-			  {
-				  PulsewidthCalc_us_limited_smooth=PulsewidthCalc_us_limited;
+				  if(PulsewidthCalc_us_limited_smooth>PulsewidthCalc_us_limited)
+				  {
+					  PulsewidthCalc_us_limited_smooth=PulsewidthCalc_us_limited;
+				  }
 			  }
 		  }
+		  SmoothLoopcount=0;
 	  }
   }//------------------------------------------------------------------------
 
@@ -378,18 +405,18 @@ void TIM3_IRQHandler(void)
   }
 
   //MOTOR STATUS ->0 RPM TOO LOW--------------------------------------
-//  if(MotorStatus==2)
-//  {
-//	  if(MotorRPM<MANUALTOAUTORPMTHRESHOLD)
-//	  {
-//		  AutoRPMnotstablecount++;
-//	  }
-//
-//	  if(AutoRPMnotstablecount>CYCLESWITHMINTRPM)
-//	  {
-//		  MotorStatus=0;
-//	  }
-//  }
+  if(MotorStatus==2)
+  {
+	  if(MotorRPM<MANUALTOAUTORPMTHRESHOLD)
+	  {
+		  AutoRPMnotstablecount++;
+	  }
+
+	  if(AutoRPMnotstablecount>CYCLESWITHMINTRPM)
+	  {
+		  MotorStatus=0;
+	  }
+  }
 
   LED_OFF;
   /* USER CODE END TIM3_IRQn 0 */
