@@ -67,9 +67,9 @@ extern "C" {
 #define MANUALSPINSTATEDELAY 	 397      	//Delay between states in 10us cyles for 360RPM -> 6turn/s ->x42 state changes/turn -time between states 1/252 seconds -->3968us delay ->397 (10us) cycles
 #define MAUNALPWM				 100      	//(Range 0 counts of 1000)
 #define MANAULDELAYDECREASE		 2			//PWM decrease per cycle
-#define MANUALTOAUTORPMTHRESHOLD 1000 		//RPM switch to auto
-#define CYCLESWITHMANUALRPM		 2000       //min 20ms in MANUAL MODE
-#define CYCLESWITHMINTRPM  		 1000   	//10ms <MIN RPM ->switch OFF
+#define CYCLESWITHMANUALRPM		 2000       //20ms time in 10us quants in MANUAL MODE
+#define MINRPMAUTORPMTHRESHOLD 	 1000 		//RPM switch off
+#define CYCLESWITHMINTRPM  		 10000 	  	//100ms with MIN RPM ->switch OFF
 #define MOTORSTATUSONETIMEOUT    50000 		//0.5sec if Motor doesn't start return back to Zero State
 
 #define MINSTARTTRESHOLD	     50       	//(Range 0 counts of 1000)

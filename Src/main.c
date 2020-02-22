@@ -68,7 +68,7 @@ uint32_t watch2;
 uint32_t watch3;
 uint32_t watchArray[1000];
 uint32_t MainLoop;
-
+uint32_t TimeHist;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -94,6 +94,9 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
+	//enable DWT counter
+	DWT->CYCCNT = 0;
+	DWT->CTRL |= 1;
   /* USER CODE END 1 */
   
 
@@ -151,9 +154,14 @@ int main(void)
 	  //ITMstringSend("Hello\n\r",7); //more direct approach
 
 	  MainLoop++;
-	  HAL_Delay(50);
+	  HAL_Delay(100);
 
+
+	   //Small delay implementation 72 cycles with uP clock->1us
+	   //TimeHist=DWT->CYCCNT;
+	   //while((DWT->CYCCNT-TimeHist)<72){}
   }
+
   /* USER CODE END 3 */
 }
 

@@ -53,6 +53,7 @@ uint32_t PulsewidthCalc_us_limited_smooth=0;
 uint32_t MotorStatus=0; //0-OFF, 1-MANUAL, 2-AUTO
 uint32_t ZeroCrossCount=0;
 uint32_t MotorRPM=0;
+uint32_t LEDblinkcount=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -70,6 +71,8 @@ extern TIM_HandleTypeDef htim3;
 /* USER CODE BEGIN EV */
 extern TIM_HandleTypeDef htim1;
 
+extern uint32_t TimeDelay;
+extern uint32_t TimeHist;
 extern uint32_t watchState0;
 extern uint32_t watchState1;
 extern uint32_t watchState2;
@@ -228,6 +231,27 @@ void SysTick_Handler(void)
 
   printf("MS=%u \n",MotorStatus);
   /* USER CODE END SysTick_IRQn 1 */
+
+  //LED control
+  if(MotorStatus==0)LED_ON;
+  else if(MotorStatus==1)//slow blink
+  {
+	  LEDblinkcount++;
+	  if(LEDblinkcount>1000)LEDblinkcount=0;
+
+	  if(LEDblinkcount>500)LED_ON; //toggle half cycle ON /OFF
+	  else LED_OFF;
+  }
+  else if(MotorStatus==2)//fast blink
+  {
+	  LEDblinkcount++;
+	  if(LEDblinkcount>500)LEDblinkcount=0;
+
+	  if(LEDblinkcount>250)LED_ON; //toggle half cycle ON /OFF
+	  else LED_OFF;
+  }
+
+
 }
 
 /******************************************************************************/
@@ -248,8 +272,36 @@ void EXTI0_IRQHandler(void)
   /* USER CODE BEGIN EXTI0_IRQn 1 */
 
   EXTI->PR |=(EXTI_PR_PR0); //clear IT flag
+
+  if(MotorStatus==2)
+  {
+	  if(ACROSSSTAT)
+	  {
+		  //AH CL
+		  TIM2->CCR1=PulsewidthCalc_us_limited_smooth; 	//Phase A	PWM
+		  TIM2->CCR2=0;		   							//Phase B   0
+		  TIM2->CCR3=0;									//Phase c   0
+
+		  ALowOFF;
+		  BLowOFF;
+		  CLowON;
+	  }
+
+	  else
+	  {
+		  //BH CL
+		  TIM2->CCR1=0; 								//Phase A 	0
+		  TIM2->CCR2=PulsewidthCalc_us_limited_smooth;	//Phase B   PWM
+		  TIM2->CCR3=0;									//Phase c   0
+
+		  ALowOFF;
+		  BLowOFF;
+		  CLowON;
+	  }
+  }
+
+  //SetNextState(&MotorStatus, &PulsewidthCalc_us_limited_smooth); slow variant
   watch1++;
-  SetNextState(&MotorStatus, &PulsewidthCalc_us_limited_smooth);
   ZeroCrossCount++;
 
   /* USER CODE END EXTI0_IRQn 1 */
@@ -266,8 +318,36 @@ void EXTI1_IRQHandler(void)
   /* USER CODE BEGIN EXTI1_IRQn 1 */
 
   EXTI->PR |=(EXTI_PR_PR1); //clear IT flag
+
+  if(MotorStatus==2)
+  {
+	  if(BCROSSSTAT)
+	  {
+		  //BH AL
+		  TIM2->CCR1=0; 								//Phase A 	0
+	      TIM2->CCR2=PulsewidthCalc_us_limited_smooth;	//Phase B   PWM
+		  TIM2->CCR3=0;									//Phase c   0
+
+		  ALowON;
+		  BLowOFF;
+		  CLowOFF;
+	  }
+
+	  else
+	  {
+		  //CH AL
+		  TIM2->CCR1=0; 								//Phase A 	0
+		  TIM2->CCR2=0;									//Phase B   0
+		  TIM2->CCR3=PulsewidthCalc_us_limited_smooth;	//Phase c   PWM
+
+		  ALowON;
+		  BLowOFF;
+		  CLowOFF;
+	  }
+  }
+
+  //SetNextState(&MotorStatus, &PulsewidthCalc_us_limited_smooth); slow variant
   watch2++;
-  SetNextState(&MotorStatus, &PulsewidthCalc_us_limited_smooth);
   ZeroCrossCount++;
 
   /* USER CODE END EXTI1_IRQn 1 */
@@ -279,7 +359,6 @@ void EXTI1_IRQHandler(void)
 void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
-  LED_ON;
   TIM3->SR &=~(TIM_SR_UIF); //clear UIF flag
 
   static uint32_t timestep=0;
@@ -335,7 +414,7 @@ void TIM3_IRQHandler(void)
   }
 
   //Estimate if motor is with ENOUGH RPM FOR ENOUGH TIME TO SWITCH TO AUTO SPIN(MotorStatus=2)
-  if(MotorStatus==1 && MotorRPM>MANUALTOAUTORPMTHRESHOLD)
+  if(MotorStatus==1)
   {
 	  ManualRPMstablecount++;
 	  if(ManualRPMstablecount>CYCLESWITHMANUALRPM)
@@ -345,6 +424,7 @@ void TIM3_IRQHandler(void)
 	  }
   }
 
+
   //APPROACH SET PWM----------------------------------------------------------
   if(MotorStatus==2)
   {
@@ -353,7 +433,7 @@ void TIM3_IRQHandler(void)
 	  SmoothLoopcount++;
 	  if(SmoothLoopcount>=SMOOTHCYCLES)
 	  {
-		  if(DeltaPWMsign < (int32_t)(0)) //PWM increase
+		  if( DeltaPWMsign < (int32_t)(0) ) //PWM decrease
 		  {
 			  if(  (uint32_t)(DeltaPWMsign*(-1)) > PWMSTEP)
 			  {
@@ -365,9 +445,11 @@ void TIM3_IRQHandler(void)
 		  }
 		  else
 		  {
-			  if(  (uint32_t)(DeltaPWMsign) > PWMSTEP)
+			  if(  (uint32_t)(DeltaPWMsign) > PWMSTEP )
 			  {
-				  PulsewidthCalc_us_limited_smooth+=PWMSTEP;
+
+				PulsewidthCalc_us_limited_smooth+=PWMSTEP; //PWM increase
+
 
 				  if(PulsewidthCalc_us_limited_smooth>PulsewidthCalc_us_limited)
 				  {
@@ -407,7 +489,7 @@ void TIM3_IRQHandler(void)
   //MOTOR STATUS ->0 RPM TOO LOW--------------------------------------
   if(MotorStatus==2)
   {
-	  if(MotorRPM<MANUALTOAUTORPMTHRESHOLD)
+	  if(MotorRPM<MINRPMAUTORPMTHRESHOLD)
 	  {
 		  AutoRPMnotstablecount++;
 	  }
@@ -417,8 +499,6 @@ void TIM3_IRQHandler(void)
 		  MotorStatus=0;
 	  }
   }
-
-  LED_OFF;
   /* USER CODE END TIM3_IRQn 0 */
   /* USER CODE BEGIN TIM3_IRQn 1 */
   /* USER CODE END TIM3_IRQn 1 */
@@ -435,8 +515,37 @@ void EXTI15_10_IRQHandler(void)
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 
   EXTI->PR |=(EXTI_PR_PR10); //clear IT flag
+
+
+  if(MotorStatus==2)
+  {
+	  if(CCROSSSTAT)
+	  {
+		  //CH BL
+		  TIM2->CCR1=0; 								//Phase A 	0
+	      TIM2->CCR2=0;									//Phase B   0
+		  TIM2->CCR3=PulsewidthCalc_us_limited_smooth;	//Phase c   PWM
+
+		  ALowOFF;
+		  BLowON;
+		  CLowOFF;
+	  }
+
+	  else
+	  {
+		  //AH BL
+		  TIM2->CCR1=PulsewidthCalc_us_limited_smooth; 	//Phase A 	PWM
+		  TIM2->CCR2=0;									//Phase B   0
+		  TIM2->CCR3=0;									//Phase c   0
+
+		  ALowOFF;
+		  BLowON;
+		  CLowOFF;
+	  }
+  }
+
+  //SetNextState(&MotorStatus, &PulsewidthCalc_us_limited_smooth); slow variant
   watch3++;
-  SetNextState(&MotorStatus, &PulsewidthCalc_us_limited_smooth);
   ZeroCrossCount++;
 
   /* USER CODE END EXTI15_10_IRQn 1 */
