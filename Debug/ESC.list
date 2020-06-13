@@ -39,11 +39,11 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING
  17 .debug_line   00007a9d  00000000  00000000  00044b82  2**0
                   CONTENTS, READONLY, DEBUGGING
- 18 .debug_str    00070fff  00000000  00000000  0004c61f  2**0
+ 18 .debug_str    00070ffd  00000000  00000000  0004c61f  2**0
                   CONTENTS, READONLY, DEBUGGING
- 19 .comment      0000007b  00000000  00000000  000bd61e  2**0
+ 19 .comment      0000007b  00000000  00000000  000bd61c  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  0000315c  00000000  00000000  000bd69c  2**2
+ 20 .debug_frame  0000315c  00000000  00000000  000bd698  2**2
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -8292,7 +8292,7 @@ void TIM3_IRQHandler(void)
 		  set_next_step(MotorStateManual,MAUNALPWM);
  8002e50:	4b6e      	ldr	r3, [pc, #440]	; (800300c <TIM3_IRQHandler+0x228>)
  8002e52:	681b      	ldr	r3, [r3, #0]
- 8002e54:	2164      	movs	r1, #100	; 0x64
+ 8002e54:	2178      	movs	r1, #120	; 0x78
  8002e56:	4618      	mov	r0, r3
  8002e58:	f7ff fa3c 	bl	80022d4 <set_next_step>
 		  MotorStateManual++;
@@ -8330,7 +8330,7 @@ void TIM3_IRQHandler(void)
 			  ManualSpinDelayDecrease+=MANAULDELAYDECREASE;
  8002e8a:	4b64      	ldr	r3, [pc, #400]	; (800301c <TIM3_IRQHandler+0x238>)
  8002e8c:	681b      	ldr	r3, [r3, #0]
- 8002e8e:	3302      	adds	r3, #2
+ 8002e8e:	3301      	adds	r3, #1
  8002e90:	4a62      	ldr	r2, [pc, #392]	; (800301c <TIM3_IRQHandler+0x238>)
  8002e92:	6013      	str	r3, [r2, #0]
 			  ManualSpinstateDelay=MANUALSPINSTATEDELAY-ManualSpinDelayDecrease;
@@ -8351,7 +8351,7 @@ void TIM3_IRQHandler(void)
 	  if(MotorStatusTimeout>=MOTORSTATUSONETIMEOUT)
  8002eac:	4b5c      	ldr	r3, [pc, #368]	; (8003020 <TIM3_IRQHandler+0x23c>)
  8002eae:	681b      	ldr	r3, [r3, #0]
- 8002eb0:	f24c 324f 	movw	r2, #49999	; 0xc34f
+ 8002eb0:	f640 32b7 	movw	r2, #2999	; 0xbb7
  8002eb4:	4293      	cmp	r3, r2
  8002eb6:	d902      	bls.n	8002ebe <TIM3_IRQHandler+0xda>
 	  {
@@ -8387,7 +8387,7 @@ void TIM3_IRQHandler(void)
  8002ede:	601a      	str	r2, [r3, #0]
 		  PulsewidthCalc_us_limited_smooth=MAUNALPWM;
  8002ee0:	4b50      	ldr	r3, [pc, #320]	; (8003024 <TIM3_IRQHandler+0x240>)
- 8002ee2:	2264      	movs	r2, #100	; 0x64
+ 8002ee2:	2278      	movs	r2, #120	; 0x78
  8002ee4:	601a      	str	r2, [r3, #0]
 	  }
   }
@@ -8573,7 +8573,7 @@ void TIM3_IRQHandler(void)
 	  if(MotorRPM<MINRPMAUTORPMTHRESHOLD)
  8002fd2:	4b1a      	ldr	r3, [pc, #104]	; (800303c <TIM3_IRQHandler+0x258>)
  8002fd4:	681b      	ldr	r3, [r3, #0]
- 8002fd6:	f5b3 7f7a 	cmp.w	r3, #1000	; 0x3e8
+ 8002fd6:	f5b3 7ffa 	cmp.w	r3, #500	; 0x1f4
  8002fda:	d204      	bcs.n	8002fe6 <TIM3_IRQHandler+0x202>
 	  {
 		  AutoRPMnotstablecount++;
