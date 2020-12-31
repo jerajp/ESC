@@ -69,11 +69,13 @@ extern "C" {
 #define MANAULDELAYDECREASE		 1			//PWM decrease per cycle
 #define CYCLESWITHMANUALRPM		 2000       //20ms time in 10us quants in MANUAL MODE
 #define MINRPMAUTORPMTHRESHOLD 	 500 		//RPM switch off
-#define CYCLESWITHMINTRPM  		 10000 	  	//100ms with MIN RPM ->switch OFF
+#define CYCLESWITHMINTRPM  		 5000 	  	//50ms with MIN RPM ->switch to MANUAL
 #define MOTORSTATUSONETIMEOUT    3000 		//50msec if Motor doesn't start return back to Zero State
 
 #define MINSTARTTRESHOLD	     50       	//(Range 0 counts of 1000)
 #define PWM_MAX_LIMIT 		     1000
+
+#define STALLCOUNT			     10000 		//10us loop period x8000=100ms with no ratation latch motor
 
 //PWM REFERENCE CLOSING IN TO ACTUAL PWM
 #define PWMSTEP 1

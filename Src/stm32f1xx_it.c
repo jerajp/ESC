@@ -50,10 +50,11 @@ uint32_t PulsewidthCalc_us=0;
 uint32_t PulsewidthCalc_us_limited=0;
 uint32_t PulsewidthCalc_us_limited_smooth=0;
 
-uint32_t MotorStatus=0; //0-OFF, 1-MANUAL, 2-AUTO
+uint32_t MotorStatus=0; //0-OFF, 1-MANUAL, 2-AUTO //3 Error
 uint32_t ZeroCrossCount=0;
 uint32_t MotorRPM=0;
 uint32_t LEDblinkcount=0;
+uint32_t stallcounter=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -301,7 +302,7 @@ void EXTI0_IRQHandler(void)
   }
 
   //SetNextState(&MotorStatus, &PulsewidthCalc_us_limited_smooth); slow variant
-  watch1++;
+  stallcounter=0;
   ZeroCrossCount++;
 
   /* USER CODE END EXTI0_IRQn 1 */
@@ -347,7 +348,7 @@ void EXTI1_IRQHandler(void)
   }
 
   //SetNextState(&MotorStatus, &PulsewidthCalc_us_limited_smooth); slow variant
-  watch2++;
+  stallcounter=0;
   ZeroCrossCount++;
 
   /* USER CODE END EXTI1_IRQn 1 */
@@ -382,6 +383,7 @@ void TIM3_IRQHandler(void)
 	  ManualSpinstateDelay=MANUALSPINSTATEDELAY;
 	  ManualSpinDelayDecrease=0;
 	  MotorStatusTimeout=0;
+	  stallcounter=0;//reset stall counter
   }
 
   //Manually change state to achieve spin
@@ -410,7 +412,9 @@ void TIM3_IRQHandler(void)
 	  if(MotorStatusTimeout>=MOTORSTATUSONETIMEOUT)
 	  {
 		  MotorStatus=0;
+		  AllPhaseOFF();
 	  }
+
   }
 
   //Estimate if motor is with ENOUGH RPM FOR ENOUGH TIME TO SWITCH TO AUTO SPIN(MotorStatus=2)
@@ -486,9 +490,11 @@ void TIM3_IRQHandler(void)
 	  AllPhaseOFF();
   }
 
-  //MOTOR STATUS ->0 RPM TOO LOW--------------------------------------
+  //MOTOR STATUS ->0 RPM TOO LOW+added fast stall protection
   if(MotorStatus==2)
   {
+	  stallcounter++;//State IT set counter to 0
+
 	  if(MotorRPM<MINRPMAUTORPMTHRESHOLD)
 	  {
 		  AutoRPMnotstablecount++;
@@ -496,8 +502,16 @@ void TIM3_IRQHandler(void)
 
 	  if(AutoRPMnotstablecount>CYCLESWITHMINTRPM)
 	  {
-		  MotorStatus=0;
+		  MotorStatus=0;//Motor will restart if throttle is active
+		  AllPhaseOFF();
 	  }
+
+	  if(stallcounter>=STALLCOUNT)
+	  {
+		  MotorStatus=3; //Motor will not restart on it's own
+		  AllPhaseOFF();
+	  }
+
   }
   /* USER CODE END TIM3_IRQn 0 */
   /* USER CODE BEGIN TIM3_IRQn 1 */
@@ -545,7 +559,7 @@ void EXTI15_10_IRQHandler(void)
   }
 
   //SetNextState(&MotorStatus, &PulsewidthCalc_us_limited_smooth); slow variant
-  watch3++;
+  stallcounter=0;
   ZeroCrossCount++;
 
   /* USER CODE END EXTI15_10_IRQn 1 */
